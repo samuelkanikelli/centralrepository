@@ -1,0 +1,37 @@
+---
+- name: Grant write permission to Docker socket and deploy Docker image
+  hosts: docker_servers
+  become: true
+  vars:
+    app_repo_url: "https://github.com/fuhrysteve/php-docker-apache-example.git"
+    app_repo_dest: "/home/ubuntu/php-docker-apache-example"
+    docker_image_name: "my_app"
+    docker_image_tag: "latest"
+    docker_container_name: "my_app_container"
+    docker_container_port: 8080
+  tasks:
+    - name: Clone repository
+      git:
+        repo: "{{ app_repo_url }}"
+        dest: "{{ app_repo_dest }}"
+
+    - name: Change permissions of Docker socket
+      file:
+        path: /var/run/docker.sock
+        mode: "0666"
+
+    - name: Build Docker image
+      docker_image:
+        name: "{{ docker_image_name }}"
+        tag: "{{ docker_image_tag }}"
+        build:
+          path: "{{ app_repo_dest }}"
+          dockerfile: Dockerfile
+
+    - name: Run Docker container
+      docker_container:
+        name: "{{ docker_container_name }}"
+        image: "{{ docker_image_name }}:{{ docker_image_tag }}"
+        ports:
+          - "{{ docker_container_port }}:8080"
+        restart_policy: always
